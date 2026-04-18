@@ -4,14 +4,13 @@ import json
 
 CURRENT = "current"
 LAST = "last"
-REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+REDIS_HOST = os.environ.get("REDIS_HOST", "10.219.180.1")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
 REDIS_DB = int(os.environ.get("REDIS_DB", 0))
 REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "pass")
 
 
 class Points:
-
     def __init__(self, current, last):
         self.current = current
         self.last = last

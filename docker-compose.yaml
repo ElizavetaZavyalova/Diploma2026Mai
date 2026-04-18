@@ -11,9 +11,130 @@ services:
     volumes:
       - redis_data:/data
     command: >
-      redis-server
-      --appendonly yes
-      --requirepass pass
+      redis-server --appendonly yes --requirepass pass
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: clickhouse
+    environment:
+      CLICKHOUSE_DB: etl_data
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: clickhouse
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+
+  flink-jobmanager:
+    build:
+      context: .
+      dockerfile: flink/flink.dockerfile
+    container_name: flink-jobmanager
+    command: jobmanager
+    ports:
+      - "8081:8081"
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+  flink-taskmanager:
+    build:
+      context: .
+      dockerfile: flink/flink.dockerfile
+    container_name: flink-taskmanager
+    depends_on:
+      - flink-jobmanager
+    command: taskmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 2
+  flink-deployer:
+    build:
+      context: .
+      dockerfile: flink/flink.dockerfile
+    environment:
+      BOOTSTRAP_SERVER: kafka:9092
+      REGION: mai
+      CLICKHOUSE_URL: jdbc:clickhouse://clickhouse:8123/default
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASS: clickhouse
+      CLICKHOUSE_DRIVER: com.clickhouse.jdbc.ClickHouseDriver
+    depends_on:
+      - flink-jobmanager
+      - clickhouse
+      - kafka
+    volumes:
+      - ./flink/app:/jobs
+    entrypoint: >
+      sh -c "
+      sleep 20 &&
+      flink run -m flink-jobmanager:8081 -py /jobs/flink_etl.py
+      "
+
+  gui_service:
+    container_name: gui_service
+    build:
+      context: .
+      dockerfile: gui_service/gui_service.dockerfile
+    ports:
+      - "8083:8083"
+    environment:
+      PORT_FAST_API: 8083
+      HOST_FAST_API: "0.0.0.0"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: pass
+
+  raspberry_service:
+    container_name: raspberry_service
+    build:
+      context: .
+      dockerfile: raspberry_service/rustberi_service.dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      PORT_FAST_API: 8082
+      HOST_FAST_API: "0.0.0.0"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: pass
+
+  raspberry-pi1:
+    container_name: rp1
+    build:
+      context: .
+      dockerfile: rustberi_emulator/emulate.dockerfile
+    environment:
+      SERVER_URL: "http://raspberry_service:8082"
+      DEVICE_ID: "mai-1"
 
 volumes:
   redis_data:
+  clickhouse_data:
+
+networks:
+  default:
+    name: diploma_network

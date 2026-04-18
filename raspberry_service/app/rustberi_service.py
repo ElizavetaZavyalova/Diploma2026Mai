@@ -3,7 +3,8 @@ import uvicorn
 import os
 from pydantic import BaseModel
 
-from RustberiService.redis_repository import RedisRepository
+from kafka_repository import KafkaRepository
+from redis_repository import RedisRepository
 
 
 PORT_FAST_API = int(os.environ.get("PORT_FAST_API", 8080))
@@ -16,6 +17,7 @@ app = FastAPI(
 )
 
 repo = RedisRepository()
+kafka = KafkaRepository()
 
 
 class PointInfo(BaseModel):
@@ -25,8 +27,9 @@ class PointInfo(BaseModel):
 
 
 @app.post("/add_point/{device_id}", tags=["Points"])
-def create_data(device_id: str, point: PointInfo):
+async def create_data(device_id: str, point: PointInfo):
     repo.set_point(device_id, point.model_dump())
+    kafka.send_to_kafka(device_id, point.model_dump())
 
     return {
         "status": "saved",
