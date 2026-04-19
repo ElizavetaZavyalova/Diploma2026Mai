@@ -3,7 +3,8 @@ import requests
 import random
 from datetime import datetime
 import os
-SERVER_URL = os.environ.get("SERVER_URL", "http://10.219.180.1:8080")
+# Юзай этот ip
+SERVER_URL = os.environ.get("SERVER_URL", "http://10.219.180.1:8082")
 DEVICE_ID = os.environ.get("DEVICE_ID", "mai-0")
 
 
