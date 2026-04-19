@@ -29,4 +29,4 @@ def send_point():
 if __name__ == "__main__":
     while True:
         send_point()
-        time.sleep(2)
+        time.sleep(1)

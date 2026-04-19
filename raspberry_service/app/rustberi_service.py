@@ -2,6 +2,7 @@ from fastapi import FastAPI
 import uvicorn
 import os
 from pydantic import BaseModel
+from fastapi import status
 
 from kafka_repository import KafkaRepository
 from redis_repository import RedisRepository
@@ -28,8 +29,9 @@ class PointInfo(BaseModel):
 
 @app.post("/add_point/{device_id}", tags=["Points"])
 async def create_data(device_id: str, point: PointInfo):
-    repo.set_point(device_id, point.model_dump())
-    kafka.send_to_kafka(device_id, point.model_dump())
+    if(point.time is not  None):
+        repo.set_point(device_id, point.model_dump())
+        kafka.send_to_kafka(device_id, point.model_dump())
 
     return {
         "status": "saved",
@@ -38,7 +40,7 @@ async def create_data(device_id: str, point: PointInfo):
     }
 
 
-@app.get("/", tags=["Health"])
+@app.get("/health", tags=["Health"], status_code=status.HTTP_200_OK)
 def root():
     return {"status": "ok"}
 

@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 import uvicorn
 import os
+from fastapi import status
 
+from clichouse_repository import ClickhouseRepository
 from redis_repository import RedisRepository
 
 
@@ -15,18 +17,23 @@ app = FastAPI(
 )
 
 repo = RedisRepository()
+clickhouse= ClickhouseRepository()
 
+from fastapi import FastAPI
 
+app = FastAPI()
 @app.get("/point/{device_id}", tags=["Points"])
 async def get_point(device_id: str):
     return repo.get_point(device_id)
-
+@app.get("/point_history/{region}/{device_id}/{count}", tags=["Points"])
+async def get_last_point_history(device_id: str, region:str, count: int):
+    return clickhouse.get_last_points(count=count, region=region, device_id=device_id)
 @app.get("/points/", tags=["Points"])
 async def get_point(device_ids: list):
     return repo.get_points(device_ids)
 
 
-@app.get("/", tags=["Health"])
+@app.get("/health", tags=["Health"], status_code=status.HTTP_200_OK)
 def root():
     return {"status": "ok"}
 
