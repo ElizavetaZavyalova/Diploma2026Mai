@@ -5,14 +5,16 @@ from datetime import datetime
 import os
 # Юзай этот ip
 SERVER_URL = os.environ.get("SERVER_URL", "http://10.219.180.1:8082")
-DEVICE_ID = os.environ.get("DEVICE_ID", "mai-0")# формат id такой
-
+DEVICE_ID = os.environ.get("DEVICE_ID", "mai-0")
+LAT = float(os.environ.get("LAT", "55.46"))
+LON = float(os.environ.get("LON", "37.37"))
 
 def generate_point():
     return {
         "time": datetime.utcnow().isoformat(),
-        "x": random.uniform(0, 10),
-        "y": random.uniform(0, 10),
+        "angle": random.uniform(0, 360),
+        "lat": LAT,
+        "lon": LON
     }
 
 

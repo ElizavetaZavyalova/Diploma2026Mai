@@ -33,7 +33,8 @@ class Points:
 class RedisRepository:
     def __init__(self,
                  host=REDIS_HOST,
-                 port=REDIS_PORT, password=REDIS_PASSWORD,
+                 port=REDIS_PORT,
+                 password=REDIS_PASSWORD,
                  db=REDIS_DB):
         self.redis = redis.Redis(
             host=host,
@@ -56,10 +57,14 @@ class RedisRepository:
 
     def get_point(self, device_id):
         existing = self._get(device_id)
-        if existing:
-            return Points.from_dict(existing)
+        return Points.from_dict(existing) if existing else None
 
-    def get_points(self, device_ids:list):
-        existing = self._get_many(device_ids)
-        if existing:
-            return Points.from_dict(existing)
+    def get_points(self, device_ids: list):
+        data = self._get_many(device_ids)
+        points = [
+            Points.from_dict(value)
+            for value in data.values()
+            if value is not None
+        ]
+
+        return points if points else None

@@ -4,7 +4,6 @@ import os
 from pydantic import BaseModel
 from fastapi import status
 
-from kafka_repository import KafkaRepository
 from redis_repository import RedisRepository
 
 
@@ -18,21 +17,19 @@ app = FastAPI(
 )
 
 repo = RedisRepository()
-kafka = KafkaRepository()
 
 
 class PointInfo(BaseModel):
     time: str
-    x: float
-    y: float
+    angle: float
+    lat: float
+    lon: float
 
 
 @app.post("/add_point/{device_id}", tags=["Points"])
 async def create_data(device_id: str, point: PointInfo):
     if(point.time is not  None):
         repo.set_point(device_id, point.model_dump())
-        kafka.send_to_kafka(device_id, point.model_dump())
-
     return {
         "status": "saved",
         "device_id": device_id,
